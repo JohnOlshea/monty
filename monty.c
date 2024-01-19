@@ -34,6 +34,115 @@ void _puts(char *str)
 }
 
 /**
+ * pint - prints the value at the top of the stack
+ * @stack: A pointer to the head of the stack
+ * @line_number: The line number in the Monty file
+ *
+ * Description: Prints the value at the top of the stack
+ */
+void pint(stack_t **stack, unsigned int line_number)
+{
+	if (*stack == NULL)
+	{
+		fprintf(stderr, "L%d: can't pint, stack empty\n", line_number);
+		exit(EXIT_FAILURE);
+	}
+
+	printf("%d\n", (*stack)->n);
+}
+
+/**
+ * swap - swaps the top two elements of the stack
+ * @stack: A pointer to the head of the stack
+ * @line_number: The line number in the Monty bytecode file
+ *
+ * Description: Swaps the top two elements of the stack. If the stack contains
+ * less than two elements, prints an error message and exits with EXIT_FAILURE.
+ */
+void swap(stack_t **stack, unsigned int line_number)
+{
+	stack_t *first, *second;
+
+	if (*stack == NULL || (*stack)->next == NULL)
+	{
+		fprintf(stderr, "L%d: can't swap, stack too short\n", line_number);
+		exit(EXIT_FAILURE);
+	}
+
+	first = *stack;
+	second = first->next;
+
+	first->next = second->next;
+	second->prev = NULL;
+	first->prev = second;
+	second->next = first;
+
+	*stack = second;
+}
+
+/**
+ * pop - removes the top element of the stack
+ * @stack: A pointer to the head of the stack
+ * @line_number: The line number in the Monty bytecode file
+ *
+ * Description: Removes the top element of the stack. If the stack is empty,
+ * prints an error message and exits with EXIT_FAILURE.
+ */
+void pop(stack_t **stack, unsigned int line_number)
+{
+	stack_t *temp = *stack;
+
+	if (*stack == NULL)
+	{
+		fprintf(stderr, "L%d: can't pop an empty stack\n", line_number);
+		exit(EXIT_FAILURE);
+	}
+
+	*stack = temp->next;
+
+	if (*stack != NULL)
+		(*stack)->prev = NULL;
+
+	free(temp);
+}
+
+/**
+ * add - adds the top two elements of the stack
+ * @stack: A pointer to the head of the stack
+ * @line_number: The line number in the Monty bytecode file
+ *
+ * Description: Adds the top two elements of the stack. If the stack contains
+ * less than two elements, prints an error message and exits with EXIT_FAILURE.
+ * The result is stored in the second top element of the stack, and the top
+ * element is removed.
+ */
+void add(stack_t **stack, unsigned int line_number)
+{
+	if (*stack == NULL || (*stack)->next == NULL)
+	{
+		fprintf(stderr, "L%d: can't add, stack too short\n", line_number);
+		exit(EXIT_FAILURE);
+	}
+
+	(*stack)->next->n += (*stack)->n;
+
+	pop(stack, line_number);
+}
+
+/**
+ * nop - does nothing
+ * @stack: A pointer to the head of the stack
+ * @line_number: The line number in the Monty bytecode file
+ *
+ * Description: Does nothing. This opcode is used to represent a no-operation.
+ */
+void nop(stack_t **stack, unsigned int line_number)
+{
+	(void)stack;
+	(void)line_number;
+}
+
+/**
  * push - pushes an element onto the stack
  * @stack: A pointer to the head of the stack
  * @value_str: The string representation of the value to push
@@ -125,6 +234,10 @@ int main(int argc, char *argv[])
 	while (fgets(line, sizeof(line), file) != NULL)
 	{
 		char *opcode = strtok(line, " ");
+		char *rest_of_line = line + strlen(opcode);
+
+		if (line[0] == '\n' || (line[0] == ' ' && line[1] == '\n'))
+			continue;
 
 		line_number++;
 
@@ -150,11 +263,34 @@ int main(int argc, char *argv[])
 			{
 				pall(&stack, line_number);
 			}
+			else if (strcmp(opcode, "pint") == 0)
+			{
+				pint(&stack, line_number);
+			}
+			else if (strcmp(opcode, "pop") == 0)
+			{
+				pop(&stack, line_number);
+			}
+			else if (strcmp(opcode, "swap") == 0)
+			{
+				swap(&stack, line_number);
+			}
+			else if (strcmp(opcode, "add") == 0)
+			{
+				add(&stack, line_number);
+			}
+			else if (strcmp(opcode, "nop") == 0)
+			{
+				nop(&stack, line_number);
+			}
 			else
 			{
 				fprintf(stderr, "L%d: unknown instruction %s\n", line_number, opcode);
 				exit(EXIT_FAILURE);
 			}
+			if (*rest_of_line != '\0' && *rest_of_line != '\n')
+				fprintf(stderr, "L%d: ignoring text: %s\n", line_number, rest_of_line);
+
 		}
 	}
 
